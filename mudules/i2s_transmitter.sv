@@ -17,35 +17,29 @@
 *  @author Vladyslav Sorokin
 */
 
-module i2s_transmitter (
+module i2s_transmitter #(
+    parameter logic [7:0] CLK_DIVISION = 8'd14,
+    parameter logic [7:0] AUDIO_WORD_LEN = 8'd24,
+    parameter logic [7:0] AUDIO_FRAME_LEN = 8'd64
+) (
     input clk_i,
     input rst_ni,
-
-    input        enable_i,          // disable I2S during start-up codec config         
-    input [23:0] audio_data_i,      // voice data
-
-    output logic [23:0] wave_o,     // tracking current sending data for debugging
-
-    output logic audio_data_o,      // W6: DAC_SDATA 
-    output logic audio_lrclk_o,     // U5: LRCLK 
-    output logic audio_bclk_o       // T5: BCLK
+    input        enable_i,
+    input [AUDIO_WORD_LEN-1:0] audio_data_i,
+    output logic [AUDIO_WORD_LEN-1:0] wave_o,
+    output logic audio_data_o,
+    output logic audio_lrclk_o,
+    output logic audio_bclk_o
 );
-    ////////////////////////////
-    // Params
-    ////////////////////////////
-    // Sample Rate is set to 44.1kHz and Audio Frame (2xLRCLK) to 64bit 
-    // BCLK = 44.1kHz * 64bit = 2.8224MHz -> ~354ns
-    // MCLK = 40MHz -> 25ns
-    // 1/BCLK = ~354ns, so 350ns -> ~1.216% Sampling Rate error
-    // div14 <- 350ns/25ns
-    localparam logic [7:0] CLK_DIVISION = 8'd14;
-    localparam logic [7:0] BCLK_CNTR_HALF_CC = CLK_DIVISION/2 - 1;          // Counter value for Half Clock Cycle
-    localparam logic [7:0] BCLK_CNTR_FULL_CC = BCLK_CNTR_HALF_CC * 2 + 1;   // Counter value for Full Clock Cycle
+    // Derived parameters
+    localparam logic [7:0] BCLK_CNTR_HALF_CC = CLK_DIVISION/2 - 1;
+    localparam logic [7:0] BCLK_CNTR_FULL_CC = BCLK_CNTR_HALF_CC * 2 + 1;
+    localparam logic [7:0] AUDIO_FRAME_CNTR_HALF = AUDIO_FRAME_LEN/2 - 1;
 
-    localparam logic [7:0] AUDIO_WORD_LEN = 8'd24;  // ADAU1761 codec is 24bit  
-    localparam logic [7:0] AUDIO_FRAME_LEN = 8'd64; // Frame is set to 64bit in R16 BPF[2:0]
-    localparam logic [7:0] AUDIO_FRAME_CNTR_HALF = AUDIO_FRAME_LEN/2 - 1; // Counter value for half frame
-
+initial begin
+    assert(AUDIO_FRAME_CNTR_HALF + 1 >= AUDIO_WORD_LEN)
+    else $error("Assertion failed: AUDIO_FRAME_CNTR_HALF + 1 must be >= AUDIO_WORD_LEN");
+end
     ////////////////////////////
     // Main FSM
     ////////////////////////////
