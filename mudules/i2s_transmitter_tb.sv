@@ -2,6 +2,9 @@
 `timescale 1ps / 1ps
 
 module i2s_transmitter_tb;
+  localparam  CLK_DIVISION = 8'd14;
+  localparam  AUDIO_WORD_LEN = 8'd24;
+  localparam  AUDIO_FRAME_LEN = 8'd64;
     // questa sim required
     logic clk;          
     logic rst_n;
@@ -23,7 +26,11 @@ module i2s_transmitter_tb;
     wire audio_data_o, audio_lrclk_o, audio_bclk_o;
     wire [23:0] wave;
 
-    i2s_master UUT (
+    i2s_transmitter #(
+    .TRA_CLK_DIVISION(CLK_DIVISION),
+    .TRA_AUDIO_FRAME_LEN(AUDIO_FRAME_LEN),
+    .TRA_AUDIO_WORD_LEN(AUDIO_WORD_LEN)
+  ) UUT (
         .clk_i(clk),
         .rst_ni(rst_n),
         
@@ -36,6 +43,17 @@ module i2s_transmitter_tb;
         .audio_lrclk_o(audio_lrclk_o),
         .audio_bclk_o(audio_bclk_o)
     );
+
+    clock_generator  #(
+    .CLK_CLK_DIVISION(CLK_DIVISION),
+    .CLK_AUDIO_FRAME_LEN(AUDIO_FRAME_LEN)
+  ) clock_gen_inst (
+      .clk_i(clk),
+      .rst_ni(rst_n),
+      .enable_i(enable),
+      .bclk_o(audio_bclk_o),
+      .lrclk_o(audio_lrclk_o)
+  );
 
     // Data Self Check
     int fd;     // file descriptor
