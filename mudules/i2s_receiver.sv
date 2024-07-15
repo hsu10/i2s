@@ -1,32 +1,32 @@
 module i2s_receiver #(
-    parameter logic [7:0] CLK_DIVISION = 8'd14,
-    parameter logic [7:0] AUDIO_WORD_LEN = 8'd24,
-    parameter logic [7:0] AUDIO_FRAME_LEN = 8'd64
+    parameter logic [7:0] I2S_CLK_DIVISION = 8'd14,
+    parameter logic [7:0] I2S_AUDIO_WORD_LEN = 8'd24,
+    parameter logic [7:0] I2S_AUDIO_FRAME_LEN = 8'd64
 ) (
     input  logic                      clk_i,
     input  logic                      rst_ni,
     input  logic                      enable_i,
     input  logic                      audio_data_i,
-    output logic [AUDIO_WORD_LEN-1:0] audio_data_o,
-    output logic                      bclk_o,
-    output logic                      lrclk_o,
+    output logic [I2S_AUDIO_WORD_LEN-1:0] audio_data_o,
+    input logic                      bclk_o,
+    input logic                      lrclk_o,
     output logic                      new_sample_o
 );
   // Derived parameters
-  localparam logic [7:0] BCLK_CNTR_HALF_CC = CLK_DIVISION / 2 - 1;
+  localparam logic [7:0] BCLK_CNTR_HALF_CC = I2S_CLK_DIVISION / 2 - 1;
   localparam logic [7:0] BCLK_CNTR_FULL_CC = BCLK_CNTR_HALF_CC * 2 + 1;
-  localparam logic [7:0] AUDIO_FRAME_CNTR_HALF = AUDIO_FRAME_LEN / 2 - 1;
+  localparam logic [7:0] AUDIO_FRAME_CNTR_HALF = I2S_AUDIO_FRAME_LEN / 2 - 1;
 
 
   initial begin
-    assert (AUDIO_FRAME_CNTR_HALF + 1 >= AUDIO_WORD_LEN)
-    else $error("Assertion failed: AUDIO_FRAME_CNTR_HALF + 1 must be >= AUDIO_WORD_LEN");
+    assert (AUDIO_FRAME_CNTR_HALF + 1 >= I2S_AUDIO_WORD_LEN)
+    else $error("Assertion failed: AUDIO_FRAME_CNTR_HALF + 1 must be >= I2S_AUDIO_WORD_LEN");
   end
   // local signals
   logic [               7:0] elapsed_cycles;
   logic [               7:0] frame_cntr;
-  logic [AUDIO_WORD_LEN-1:0] shift_reg;
-  logic [AUDIO_WORD_LEN-1:0] shift_reg_l;
+  logic [I2S_AUDIO_WORD_LEN-1:0] shift_reg;
+  logic [I2S_AUDIO_WORD_LEN-1:0] shift_reg_l;
   logic                      lrclk_prev;
   logic                      bclk_prev;
   logic                      audio_data_i_sync;
@@ -54,15 +54,15 @@ module i2s_receiver #(
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (~rst_ni) begin
       elapsed_cycles <= BCLK_CNTR_FULL_CC;
-      bclk_o <= 1'b0;
+
       frame_cntr <= AUDIO_FRAME_CNTR_HALF;
-      lrclk_o <= 1'b1;
-      cnt <= AUDIO_WORD_LEN;
+
+      cnt <= I2S_AUDIO_WORD_LEN;
     end else if (enable_i) begin
       elapsed_cycles <= elapsed_cycles - 1;
 
       if (elapsed_cycles == 0) begin
-        bclk_o <= ~bclk_o;
+
 
         elapsed_cycles <= BCLK_CNTR_HALF_CC;
 
@@ -70,11 +70,11 @@ module i2s_receiver #(
           if (cnt > 0) cnt <= cnt - 1;
           frame_cntr <= frame_cntr - 1;
           if (frame_cntr == 0) begin
-            lrclk_o <= ~lrclk_o;
+
 
             frame_cntr <= AUDIO_FRAME_CNTR_HALF;
           end else if (frame_cntr == AUDIO_FRAME_CNTR_HALF) begin
-            cnt <= AUDIO_WORD_LEN;
+            cnt <= I2S_AUDIO_WORD_LEN;
           end
         end
       end
@@ -95,11 +95,11 @@ module i2s_receiver #(
   // receive data logic
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (~rst_ni) begin
-      shift_reg <= {(AUDIO_WORD_LEN) {1'b0}};
+      shift_reg <= {(I2S_AUDIO_WORD_LEN) {1'b0}};
 
-      shift_reg_l <= {(AUDIO_WORD_LEN) {1'b0}};
+      shift_reg_l <= {(I2S_AUDIO_WORD_LEN) {1'b0}};
       lrclk_prev <= 1'b1;
-      audio_data_o <= {(AUDIO_WORD_LEN) {1'b0}};
+      audio_data_o <= {(I2S_AUDIO_WORD_LEN) {1'b0}};
       new_sample_o <= 1'b0;
       //  neg_edgebclk <= 1'b0;
       //  neg_edgebclk_next <= 1'b0;
@@ -112,16 +112,16 @@ module i2s_receiver #(
       // BCLK posedge detection
       if (!bclk_o && bclk_prev) begin
         if (cnt > 0) begin
-          shift_reg   <= {shift_reg[AUDIO_WORD_LEN-2:0], audio_data_i_sync};
-          shift_reg_l <= {shift_reg_l[AUDIO_WORD_LEN-2:0], audio_data_i_sync};
+          shift_reg   <= {shift_reg[I2S_AUDIO_WORD_LEN-2:0], audio_data_i_sync};
+          shift_reg_l <= {shift_reg_l[I2S_AUDIO_WORD_LEN-2:0], audio_data_i_sync};
         end
       end
       if (flag) begin
         if (!lrclk_o) begin
-          audio_data_o <= shift_reg[AUDIO_WORD_LEN-1:0];  // only 24 bits are valid
+          audio_data_o <= shift_reg[I2S_AUDIO_WORD_LEN-1:0];  // only 24 bits are valid
           new_sample_o <= 1'b1;
         end else begin
-          audio_data_o <= shift_reg_l[AUDIO_WORD_LEN-1:0];  // only 24 bits are valid
+          audio_data_o <= shift_reg_l[I2S_AUDIO_WORD_LEN-1:0];  // only 24 bits are valid
           new_sample_o <= 1'b1;
         end
 

@@ -1,7 +1,7 @@
 
 `timescale 1ps / 1ps
 
-module i2s_master_tb;
+module i2s_transmitter_tb;
     // questa sim required
     logic clk;          
     logic rst_n;

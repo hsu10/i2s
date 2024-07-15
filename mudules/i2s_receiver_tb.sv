@@ -1,6 +1,11 @@
 `timescale 1ps / 1ps
 
 module i2s_receiver_tb;
+  // 实例化被测单元
+  localparam  CLK_DIVISION = 8'd14;
+  localparam  AUDIO_WORD_LEN = 8'd24;
+  localparam  AUDIO_FRAME_LEN = 8'd64;
+
   logic clk;
   logic rst_n;
 
@@ -18,8 +23,12 @@ module i2s_receiver_tb;
   wire bclk_o, lrclk_o;
   logic new_sample_o;
 
-  // 实例化被测单元
-  i2s_receiver UUT (
+  i2s_receiver #(
+    .I2S_CLK_DIVISION(CLK_DIVISION),
+    .I2S_AUDIO_FRAME_LEN(AUDIO_FRAME_LEN),
+    .I2S_AUDIO_WORD_LEN(AUDIO_WORD_LEN)
+  )
+  UUT (
       .clk_i(clk),
       .rst_ni(rst_n),
       .enable_i(enable),
@@ -28,6 +37,17 @@ module i2s_receiver_tb;
       .bclk_o(bclk_o),
       .lrclk_o(lrclk_o),
       .new_sample_o(new_sample_o)
+  );
+
+  clock_generator  #(
+    .CLK_CLK_DIVISION(CLK_DIVISION),
+    .CLK_AUDIO_FRAME_LEN(AUDIO_FRAME_LEN)
+  ) clock_gen_inst (
+      .clk_i(clk),
+      .rst_ni(rst_n),
+      .enable_i(enable),
+      .bclk_o(bclk_o),
+      .lrclk_o(lrclk_o)
   );
 
   // 文件描述符和测试数据
